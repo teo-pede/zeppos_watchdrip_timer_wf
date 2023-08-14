@@ -64,7 +64,6 @@ export class Watchdrip {
         this.intervalTimer = null;
         this.firstRun = true;
         this.resumeCall = false;
-        this.askedGraphData = false;
         /*
         typeof Graph
         */
@@ -336,7 +335,7 @@ export class Watchdrip {
                 debug.log('Graph is null or is AOD');
                 return;
             }
-            if (!this.graph.visibility) {
+            if (!this.graph.visibility || this.watchdripConfig.wfHrGraph === 0) {
                 this.graph.clear();
                 debug.log('Graph is not visible');
                 return;
@@ -416,7 +415,8 @@ export class Watchdrip {
             messageBuilder
                 .request({
                     method: Commands.getInfo,
-                    params: params
+                    params: params,
+                    hours: this.watchdripConfig.wfHrGraph
                 }, {
                     timeout: 5000
                 })
@@ -511,16 +511,14 @@ export class Watchdrip {
         } else {
             let info_no_graph_data = str2json(info);
             if (info_no_graph_data['graph']){
-                this.askedGraphData = true;
                 fs2.writeFileSync(WF_INFO_GRAPH, json2str(info_no_graph_data['graph']));
                 delete info_no_graph_data['graph'];
-            } else if (this.askedGraphData){
+            } else {
                 try {
                     fs2.unlinkSync(WF_INFO_GRAPH);
+                    this.graph.clear();
                 } catch (e){
-                    debug.log('error removing graph data file')
                 }
-                this.askedGraphData = false;
             }
             hmFS.SysProSetChars(WF_INFO, json2str(info_no_graph_data));
         }
