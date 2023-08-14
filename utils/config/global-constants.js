@@ -2,6 +2,7 @@ import {ALARM_UPDATE_INTERVAL} from "./constants";
 
 export const WATCHDRIP_APP_ID = "28962";
 
+export const WF_INFO_GRAPH = "watchdrip_graph_data.txt";
 export const WF_INFO = "watchdrip_info";
 export const WF_INFO_LAST_UPDATE = "watchdrip_info_last";
 export const WF_INFO_LAST_UPDATE_ATTEMPT = "watchdrip_last_attempt";
@@ -17,6 +18,7 @@ export const WATCHDRIP_CONFIG_DEFAULTS = {
     disableUpdates: false,
     showLog: false,
     useAppFetch: false,
+    wfHrGraph : 2,
 };
 
 export const WATCHDRIP_ALARM_CONFIG_DEFAULTS = {

@@ -1,4 +1,3 @@
-import {img} from "../../utils/helper";
 import {DebugText} from "../../shared/debug";
 import {Watchdrip} from "../../utils/watchdrip/watchdrip";
 import {WatchdripData} from "../../utils/watchdrip/watchdrip-data";
@@ -97,6 +96,8 @@ let bgValNoDataTextWidget, bgValTextImgWidget, bgValTimeTextWidget, bgDeltaTextW
 let imgBg, bgRect, digitalClock, daysImg, dateTextImg, btDisconnected, dndStatus, alarmStatus, distanceText, 
     editGroupLeft, editGroupRight, phoneBattery, phoneBatteryImg, watchBattery, watch_battery_prog, watch_battery_prog_full;
 
+let batterySensor;
+
 let globalNS, progressTimer, progressAngle, screenType;
 
 let debug, watchdrip;
@@ -147,17 +148,25 @@ function mergeStyles(styleObj1, styleObj2, styleObj3 = {}) {
     return Object.assign({}, styleObj1, styleObj2, styleObj3);
 }
 
+function updateWidgets() {
+    if (typeof batterySensor !== 'undefined') {
+        if (screenType !== hmSetting.screen_type.AOD) {
+            watchBattery.setProperty(hmUI.prop.TEXT, batterySensor.current + '%');
+            watch_battery_prog.setProperty(hmUI.prop.MORE, getPropsByVal(batterySensor.current, WATCH_BATTERY_PROG));
+            nextColor = 0xfabb00;
+            if (batterySensor.current > 70){
+                nextColor = 0x218c03;
+            } else if (batterySensor.current < 30){
+                nextColor = 0xa80702;
+            }
+            watch_battery_prog.setProperty(hmUI.prop.MORE, {color: nextColor});
+        }
+    }
+}
+
 let bgColorNumber = 1;
 let bgTotalColors = 5;
 
-function click_Color() {
-    if(bgColorNumber >= bgTotalColors) {
-        bgColorNumber = 1;
-    } else {
-        bgColorNumber = bgColorNumber+1;
-    }
-    imgBg.setProperty(hmUI.prop.SRC, img(`bg/bg_${bgColorNumber}.png`));
-}
 
 WatchFace({
     // draws the editable widgets
@@ -236,7 +245,7 @@ WatchFace({
         watch_battery_prog = hmUI.createWidget(hmUI.widget.FILL_RECT, WATCH_BATTERY_PROG);
         watchBattery = hmUI.createWidget(hmUI.widget.TEXT, WATCH_BATTERY_TEXT);
 
-        const batterySensor = hmSensor.createSensor(hmSensor.id.BATTERY);
+        batterySensor = hmSensor.createSensor(hmSensor.id.BATTERY);
         batterySensor.addEventListener(hmSensor.event.CHANGE, function () { 
             updateWidgets();
         });
@@ -275,22 +284,6 @@ WatchFace({
         phoneBattery = hmUI.createWidget(hmUI.widget.TEXT, PHONE_BATTERY_TEXT);
         phoneBatteryImg = hmUI.createWidget(hmUI.widget.IMG, PHONE_BATTERY_IMG);
         progress = hmUI.createWidget(hmUI.widget.IMG, IMG_LOADING_PROGRESS);
-
-        function updateWidgets() {
-            if (typeof batterySensor !== 'undefined') {
-                if (screenType !== hmSetting.screen_type.AOD) {
-                    watchBattery.setProperty(hmUI.prop.TEXT, batterySensor.current + '%');
-                    watch_battery_prog.setProperty(hmUI.prop.MORE, getPropsByVal(batterySensor.current, WATCH_BATTERY_PROG));
-                    nextColor = 0xfabb00;
-                    if (batterySensor.current > 70){
-                        nextColor = 0x218c03;
-                    } else if (batterySensor.current < 30){
-                        nextColor = 0xa80702;
-                    }
-                    watch_battery_prog.setProperty(hmUI.prop.MORE, {color: nextColor});
-                }
-            }
-        }
 
         stopLoader();
         updateWidgets();
@@ -342,9 +335,7 @@ WatchFace({
         };
 
         bgDeltaTextWidget.setProperty(hmUI.prop.TEXT, bgObj.delta);
-
         bgTrendImageWidget.setProperty(hmUI.prop.SRC, bgObj.getArrowResource());
-
         phoneBattery.setProperty(hmUI.prop.TEXT, watchdripData.getStatus().getBatVal());
 
         if (TEST_DATA) {
@@ -383,7 +374,7 @@ WatchFace({
 
             let lineStyles = {};
             const POINT_SIZE = GRAPH_SETTINGS.point_size;
-            const TREATMENT_POINT_SIZE = GRAPH_SETTINGS.treatment_point_size;
+            //const TREATMENT_POINT_SIZE = GRAPH_SETTINGS.treatment_point_size;
             const LINE_SIZE = GRAPH_SETTINGS.line_size;
             lineStyles['predict'] = new PointStyle(POINT_SIZE, POINT_SIZE, POINT_SIZE);
             lineStyles['high'] = new PointStyle(POINT_SIZE, POINT_SIZE, POINT_SIZE);
@@ -391,14 +382,14 @@ WatchFace({
             lineStyles['inRange'] = new PointStyle(POINT_SIZE, POINT_SIZE, POINT_SIZE);
             lineStyles['lineLow'] = new PointStyle("", LINE_SIZE);
             lineStyles['lineHigh'] = new PointStyle("", LINE_SIZE);
-            lineStyles['treatment'] = new PointStyle(TREATMENT_POINT_SIZE, TREATMENT_POINT_SIZE);
+            //lineStyles['treatment'] = new PointStyle(TREATMENT_POINT_SIZE, TREATMENT_POINT_SIZE);
 
             watchdrip.createGraph(GRAPH_SETTINGS.x,GRAPH_SETTINGS.y,GRAPH_SETTINGS.w,GRAPH_SETTINGS.h, lineStyles);
 
             watchdrip.start();
         }
         catch (e) {
-            console.log('LifeCycle Error', e)
+            console.log('Watchdrip Timer LifeCycle Error', e)
             e && e.stack && e.stack.split(/\n/).forEach((i) => console.log('error stack', i))
         }
     },

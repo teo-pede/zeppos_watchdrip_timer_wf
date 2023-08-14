@@ -405,7 +405,7 @@ export const EDIT_LEFT_IMG = {
 // Styles for all Left TEXT_IMG widgets
 export const EDIT_LEFT_TEXT_IMG = {
     x: px(leftX),
-    y: px(leftY + (editWidgetH / 2) - 7 )
+    y: px(leftY + (editWidgetH / 2) - 8 )
 };
 // Styles for all Left IMG_POINTER widgets
 export const EDIT_LEFT_IMG_POINTER = {
@@ -434,7 +434,7 @@ export const EDIT_RIGHT_IMG = {
 // Styles for all Right TEXT_IMG widgets
 export const EDIT_RIGHT_TEXT_IMG = {
     x: px(rightX),
-    y: px(rightY + (editWidgetH / 2) - 7 )
+    y: px(rightY + (editWidgetH / 2) - 8 )
 };
 // Styles for all Right IMG_POINTER widgets
 export const EDIT_RIGHT_IMG_POINTER = {

@@ -59,7 +59,7 @@ export class Graph {
                 }
             );
         });
-        //debug.log("Graph el created: " + this.widgets.length)
+        debug.log("Graph el created: " + this.widgets.length)
     }
 
     drawElement(x, y, pointStyle, lineName) {
@@ -104,14 +104,14 @@ export class Graph {
                 radius: pointStyle.radius,
                 color: color,
                 show_level: hmUI.show_level.ONLY_NORMAL,
-            })
+            });
         } else {
             widget = hmUI.createWidget(hmUI.widget.IMG, {
                 x: x,
                 y: y,
                 src: pointStyle.imageFile,
                 show_level: hmUI.show_level.ONLY_NORMAL,
-            })
+            });
         }
         this.widgets.push(widget);
     }
@@ -124,4 +124,5 @@ export class Graph {
         this.widgets = [];
         //debug.log("Graph clear");
     }
+
 }

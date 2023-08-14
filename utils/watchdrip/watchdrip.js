@@ -6,6 +6,7 @@ import {
     WATCHDRIP_CONFIG_DEFAULTS,
     WATCHDRIP_CONFIG_LAST_UPDATE,
     WF_INFO,
+    WF_INFO_GRAPH,
     WF_INFO_DIR,
     WF_INFO_FILE,
     WF_INFO_LAST_UPDATE,
@@ -29,6 +30,7 @@ import {
     XDRIP_UPDATE_INTERVAL_MS
 } from "../config/constants";
 import * as fs from "./../../shared/fs";
+import * as fs2 from "./../../shared/fs2";
 import {WatchdripData} from "./watchdrip-data";
 import {gotoSubpage} from "../../shared/navigate";
 import {Graph} from "./graph/graph";
@@ -62,6 +64,7 @@ export class Watchdrip {
         this.intervalTimer = null;
         this.firstRun = true;
         this.resumeCall = false;
+        this.askedGraphData = false;
         /*
         typeof Graph
         */
@@ -232,7 +235,11 @@ export class Watchdrip {
             return;
         }
         debug.log("dropConnection");
-        messageBuilder.disConnect();
+        try{
+            messageBuilder.disConnect();
+        } catch (e) {
+            debug.log('error dropConnection: ' + e)
+        }
         this.connectionActive = false;
     }
 
@@ -248,6 +255,9 @@ export class Watchdrip {
                 this.readInfo();
             }
             this.updatingData = false;
+            if (this.lastUpdateSucessful && this.lastInfoUpdate !== hmFS.SysProGetInt64(WF_INFO_LAST_UPDATE)) {
+                this.drawGraph();
+            }
             this.startDataUpdates();
         } else {
             debug.log("prevent second resume");
@@ -280,17 +290,19 @@ export class Watchdrip {
         this.onUpdateFinishCallback = callback;
     }
 
-    updateWidgets() {
+    updateWidgets(from_fetch=false) {
         debug.log("updateWidgets");
-        this.updateValuesWidget()
+        this.updateValuesWidget(from_fetch)
         this.updateTimesWidget()
     }
 
-    updateValuesWidget() {
+    updateValuesWidget(from_fetch=false) {
         if (typeof this.updateValueWidgetCallback === "function") {
             this.updateValueWidgetCallback(this.watchdripData);
         }
-        this.drawGraph();
+        if (from_fetch){
+            this.drawGraph(true);
+        }
     }
 
     updateTimesWidget() {
@@ -318,42 +330,52 @@ export class Watchdrip {
 
     //draw graph only on normal display
     //the aod mode is glitchy
-    drawGraph() {
-        if (this.graph == null || this.isAOD()) {
-            return;
-        }
-        if (!this.graph.visibility) {
-            this.graph.clear();
-            return;
-        }
-
-        let graphInfo = this.watchdripData.getGraph();
-        if (graphInfo.start === "") {
-            this.graph.clear();
-            return;
-        }
-        //debug.log("draw graph");
-        let viewportTop = this.watchdripData.getStatus().isMgdl ? GRAPH_LIMIT * MMOLL_TO_MGDL : GRAPH_LIMIT;
-        this.graph.setViewport(new Viewport(graphInfo.start, graphInfo.end, 0, viewportTop));
-        let lines = {};
-        graphInfo.lines.forEach(line => {
-            let name = line.name;
-            if (name && name in this.graphLineStyles) {
-                let lineStyle = this.graphLineStyles[name];
-                //if image not defined, use default line color
-                if (lineStyle.color === "" && lineStyle.imageFile === "") {
-                    lineStyle.color = line.color;
-                }
-                let lineObj = {};
-                lineObj.pointStyle = lineStyle;
-                lineObj.points = line.points;
-                lines[name] = lineObj;
+    drawGraph(from_fetch = false) {
+        try{
+            if (this.graph == null || this.isAOD()) {
+                debug.log('Graph is null or is AOD');
+                return;
             }
-        });
+            if (!this.graph.visibility) {
+                this.graph.clear();
+                debug.log('Graph is not visible');
+                return;
+            }
 
-        //debug.log("Lines count : " + Object.keys(lines).length);
-        this.graph.setLines(lines);
-        this.graph.draw();
+            if (!from_fetch){
+                this.readInfo(true);
+            }
+            let graphInfo = this.watchdripData.getGraph();
+            if (graphInfo.start === "") {
+                this.graph.clear();
+                debug.log('Graph start is null');
+                return;
+            }
+            //debug.log("draw graph");
+            let viewportTop = this.watchdripData.getStatus().isMgdl ? GRAPH_LIMIT * MMOLL_TO_MGDL : GRAPH_LIMIT;
+            this.graph.setViewport(new Viewport(graphInfo.start, graphInfo.end, 0, viewportTop));
+            let lines = {};
+            graphInfo.lines.forEach(line => {
+                let name = line.name;
+                if (name && name in this.graphLineStyles) {
+                    let lineStyle = this.graphLineStyles[name];
+                    //if image not defined, use default line color
+                    if (lineStyle.color === "" && lineStyle.imageFile === "") {
+                        lineStyle.color = line.color;
+                    }
+                    let lineObj = {};
+                    lineObj.pointStyle = lineStyle;
+                    lineObj.points = line.points;
+                    lines[name] = lineObj;
+                }
+            });
+            //debug.log("Lines count : " + Object.keys(lines).length);
+            this.graph.setLines(lines);
+            this.graph.draw();
+            debug.log('GRAPH DRAW DONE');
+        } catch (e) {
+            debug.log('error in drawGraph: ' + e)
+        }
     }
 
     isAppFetch() {
@@ -368,65 +390,78 @@ export class Watchdrip {
     }
 
     fetchInfo() {
-        debug.log("fetchInfo");
-        this.resetLastUpdate();
-        if (this.isAppFetch()) {
-            gotoSubpage('update', {
-                    params: WATCHDRIP_ALARM_CONFIG_DEFAULTS
-                },
-                WATCHDRIP_APP_ID);
-            return;
-        }
+        try{
+            debug.log("fetchInfo");
+            this.resetLastUpdate();
+            if (this.isAppFetch()) {
+                gotoSubpage('update', {
+                        params: WATCHDRIP_ALARM_CONFIG_DEFAULTS
+                    },
+                    WATCHDRIP_APP_ID);
+                return;
+            }
 
-        this.initConnection();
+            this.initConnection();
 
-        if (messageBuilder.connectStatus() === false) {
-            debug.log("No BT Connection");
-            return;
-        }
-        this.updatingData = true;
-        this.updateStart();
-        var params = WATCHDRIP_ALARM_CONFIG_DEFAULTS.fetchParams;
-        messageBuilder
-            .request({
-                method: Commands.getInfo,
-                params: params
-            }, {
-                timeout: 5000
-            })
-            .then((data) => {
-                debug.log("received data");
-                let {result: info = {}} = data;
-                try {
-                    if (info.error) {
-                        debug.log("Error");
-                        debug.log(info);
-                        return;
+            if (messageBuilder.connectStatus() === false) {
+                debug.log("No BT Connection");
+                return;
+            }
+            this.updatingData = true;
+            this.updateStart();
+            var params = WATCHDRIP_ALARM_CONFIG_DEFAULTS.fetchParams;
+            if (this.watchdripConfig.wfHrGraph === 0){
+                params = ''
+            }
+            messageBuilder
+                .request({
+                    method: Commands.getInfo,
+                    params: params
+                }, {
+                    timeout: 5000
+                })
+                .then((data) => {
+                    debug.log("received data");
+                    let {result: info = {}} = data;
+                    try {
+                        if (info.error) {
+                            debug.log("Error");
+                            debug.log(info);
+                            return;
+                        }
+                        this.lastInfoUpdate = this.saveInfo(info);
+                        let dataInfo = str2json(info);
+                        info = null;
+                        this.watchdripData.setData(dataInfo);
+                        this.watchdripData.updateTimeDiff();
+                        dataInfo = null;
+                        this.updateWidgets(true);
+                    } catch (e) {
+                        debug.log("error:" + e);
                     }
-                    //debug.log(info);
-                    this.lastInfoUpdate = this.saveInfo(info);
-                    let dataInfo = str2json(info);
-                    info = null;
-                    this.watchdripData.setData(dataInfo);
-                    this.watchdripData.updateTimeDiff();
-                    dataInfo = null;
-                    this.updateWidgets();
-                } catch (e) {
-                    debug.log("error:" + e);
-                }
-            })
-            .catch((error) => {
-                debug.log("fetch error:" + error);
-            })
-            .finally(() => {
-                this.updatingData = false;
-                if (typeof this.onUpdateFinishCallback === "function") {
-                    this.onUpdateFinishCallback(this.lastUpdateSucessful);
-                }
-                if (this.isAOD()) {
-                    this.dropConnection();
-                }
-            });
+                })
+                .catch((error) => {
+                    debug.log("fetch error:" + error);
+                })
+                .finally(() => {
+                    this.updatingData = false;
+                    if (typeof this.onUpdateFinishCallback === "function") {
+                        this.onUpdateFinishCallback(this.lastUpdateSucessful);
+                    }
+                    if (this.isAOD()) {
+                        this.dropConnection();
+                    }
+                });
+        } catch (e) {
+            debug.log('error fetching data: ' + e)
+            this.updatingData = false;
+            if (typeof this.onUpdateFinishCallback === "function") {
+                this.onUpdateFinishCallback(this.lastUpdateSucessful);
+            }
+            if (this.isAOD()) {
+                this.dropConnection();
+            }
+        }
     }
 
     createWatchdripDir() {
@@ -439,23 +474,30 @@ export class Watchdrip {
         }
     }
 
-    readInfo() {
+    readInfo(read_graph_data = false) {
         let info = "";
+        let bg_graph_data = "";
         if (USE_FILE_INFO_STORAGE) {
             info = fs.readTextFile(WF_INFO_FILE);
         } else {
             info = hmFS.SysProGetChars(WF_INFO);
+            if (!this.isAOD() && read_graph_data){
+                bg_graph_data = fs2.readFileSync(WF_INFO_GRAPH);
+            }
         }
         if (info) {
             let data = {};
             try {
                 data = str2json(info);
+                if (bg_graph_data){
+                    data['graph'] = str2json(bg_graph_data);
+                }
                 info = null;
                 debug.log("data was read");
                 this.watchdripData.setData(data); 
                 this.watchdripData.timeDiff = 0;
             } catch (e) {
-
+                debug.log('error reading info: ' + e);
             }
             data = null;
             return true
@@ -467,7 +509,20 @@ export class Watchdrip {
         if (USE_FILE_INFO_STORAGE) {
             fs.writeTextFile(WF_INFO_FILE, info);
         } else {
-            hmFS.SysProSetChars(WF_INFO, info);
+            let info_no_graph_data = str2json(info);
+            if (info_no_graph_data['graph']){
+                this.askedGraphData = true;
+                fs2.writeFileSync(WF_INFO_GRAPH, json2str(info_no_graph_data['graph']));
+                delete info_no_graph_data['graph'];
+            } else if (this.askedGraphData){
+                try {
+                    fs2.unlinkSync(WF_INFO_GRAPH);
+                } catch (e){
+                    debug.log('error removing graph data file')
+                }
+                this.askedGraphData = false;
+            }
+            hmFS.SysProSetChars(WF_INFO, json2str(info_no_graph_data));
         }
         this.lastUpdateSucessful = true;
         let time = this.timeSensor.utc;

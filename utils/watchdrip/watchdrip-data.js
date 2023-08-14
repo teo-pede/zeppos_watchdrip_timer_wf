@@ -8,7 +8,7 @@ import {ExternalData} from "./model/externalData";
 
 
 const BG_STALE_TIME_MS = 13 * MINUTE_IN_MS;
-const TIMEAGO_STALE = 24* 60 * MINUTE_IN_MS;
+const TIMEAGO_STALE = 24 * 60 * MINUTE_IN_MS;
 
 export class WatchdripData {
     constructor(timeSensor) {
