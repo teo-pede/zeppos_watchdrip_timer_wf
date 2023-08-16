@@ -355,17 +355,19 @@ export class Watchdrip {
             this.graph.setViewport(new Viewport(graphInfo.start, graphInfo.end, 0, viewportTop));
             let lines = {};
             graphInfo.lines.forEach(line => {
-                let name = line.name;
-                if (name && name in this.graphLineStyles) {
-                    let lineStyle = this.graphLineStyles[name];
-                    //if image not defined, use default line color
-                    if (lineStyle.color === "" && lineStyle.imageFile === "") {
-                        lineStyle.color = line.color;
+                if (line && line.name !== undefined && line.points !== undefined && line.points.length > 0){
+                    let name = line.name;
+                    if (name && name in this.graphLineStyles) {
+                        let lineStyle = this.graphLineStyles[name];
+                        //if image not defined, use default line color
+                        if (lineStyle.color === "" && lineStyle.imageFile === "") {
+                            lineStyle.color = line.color;
+                        }
+                        let lineObj = {};
+                        lineObj.pointStyle = lineStyle;
+                        lineObj.points = line.points;
+                        lines[name] = lineObj;
                     }
-                    let lineObj = {};
-                    lineObj.pointStyle = lineStyle;
-                    lineObj.points = line.points;
-                    lines[name] = lineObj;
                 }
             });
             //debug.log("Lines count : " + Object.keys(lines).length);
