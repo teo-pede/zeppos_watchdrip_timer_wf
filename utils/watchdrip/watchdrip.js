@@ -332,12 +332,10 @@ export class Watchdrip {
     drawGraph(from_fetch = false) {
         try{
             if (this.graph == null || this.isAOD()) {
-                debug.log('Graph is null or is AOD');
                 return;
             }
             if (!this.graph.visibility || this.watchdripConfig.wfHrGraph === 0) {
                 this.graph.clear();
-                debug.log('Graph is not visible');
                 return;
             }
 
@@ -347,7 +345,6 @@ export class Watchdrip {
             let graphInfo = this.watchdripData.getGraph();
             if (graphInfo.start === "") {
                 this.graph.clear();
-                debug.log('Graph start is null');
                 return;
             }
             //debug.log("draw graph");
