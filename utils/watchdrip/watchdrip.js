@@ -490,6 +490,7 @@ export class Watchdrip {
                 data = str2json(info);
                 if (bg_graph_data){
                     data['graph'] = str2json(bg_graph_data);
+                    bg_graph_data = null;
                 }
                 info = null;
                 debug.log("data was read");
@@ -520,6 +521,7 @@ export class Watchdrip {
                 }
             }
             hmFS.SysProSetChars(WF_INFO, json2str(info_no_graph_data));
+            info_no_graph_data = null;
         }
         this.lastUpdateSucessful = true;
         let time = this.timeSensor.utc;

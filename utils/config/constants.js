@@ -11,7 +11,7 @@ export const DATA_AOD_UPDATE_INTERVAL_MS = MINUTE_IN_MS * 10;
 
 export const DATA_STALE_TIME_MS = MINUTE_IN_MS * 2;
 
-export const XDRIP_UPDATE_INTERVAL_MS = MINUTE_IN_MS * 5  + SECOND_IN_MS * 30;
+export const XDRIP_UPDATE_INTERVAL_MS = MINUTE_IN_MS * 5  + SECOND_IN_MS * 40;
 
 export const ALARM_UPDATE_INTERVAL = 3 * 60; //(in seconds)
 
