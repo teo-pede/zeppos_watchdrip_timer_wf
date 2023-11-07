@@ -39,13 +39,13 @@ export function statSync(filename) {
  */
 export function writeFileSync(filename, data, options) {
   logger.log('writeFileSync begin -->', filename)
-  
+  /**
   try{
     unlinkSync(filename)
   } catch (e) {
     logger.log('error removing file: ' + e)
   }
-  
+   */
   try{
     const stringBuffer = str2ab(data)
     const source_buf = new Uint8Array(stringBuffer)
